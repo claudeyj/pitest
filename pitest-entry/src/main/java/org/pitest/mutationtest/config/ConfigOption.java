@@ -249,7 +249,12 @@ public enum ConfigOption {
   /**
    * Source file encoding
    */
-  OUTPUT_ENCODING("outputEncoding", Charset.defaultCharset().name());
+  OUTPUT_ENCODING("outputEncoding", Charset.defaultCharset().name()),
+
+  /**
+   * Original failing tests 
+   */
+  FAILING_TESTS("failingTests");
 
   private final String       text;
   private final Serializable defaultValue;

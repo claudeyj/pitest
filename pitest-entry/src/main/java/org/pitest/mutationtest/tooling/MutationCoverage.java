@@ -146,6 +146,7 @@ public class MutationCoverage {
 
   private CombinedStatistics runAnalysis(Runtime runtime, long t0, EngineArguments args, MutationEngine engine) {
     CoverageDatabase coverageData = coverage().calculateCoverage();
+    LOG.info("Number of covered lines: " + coverageData.createSummary().getNumberOfCoveredLines());
     HistoryStore history =  this.strategies.history();
 
     LOG.fine("Used memory after coverage calculation "
@@ -325,7 +326,7 @@ public class MutationCoverage {
             .createInterceptor(this.data, coverageData, bas)
             .filter(interceptorFilter);
 
-    final MutationSource source = new MutationSource(mutationConfig, testPrioritiser, bas, interceptor);
+    final MutationSource source = new MutationSource(mutationConfig, testPrioritiser, bas, interceptor, data.getFailingTests());
 
     final MutationAnalyser analyser = new IncrementalAnalyser(
         new DefaultCodeHistory(this.code, history), coverageData);

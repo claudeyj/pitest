@@ -42,6 +42,10 @@ public class MutationTestProcess {
 
   }
 
+  public MutationStatusTestPair result(MutationDetails mutant) {
+    return this.thread.getStatus(mutant.getId());
+  }
+
   public ExitCode waitToDie() {
     try {
       Optional<ExitCode> maybeExit = this.thread.waitToFinish(5);

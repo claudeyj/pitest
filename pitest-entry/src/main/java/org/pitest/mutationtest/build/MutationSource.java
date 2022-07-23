@@ -21,9 +21,13 @@ import org.pitest.coverage.TestInfo;
 import org.pitest.mutationtest.MutationConfig;
 import org.pitest.mutationtest.engine.Mutater;
 import org.pitest.mutationtest.engine.MutationDetails;
+import org.pitest.util.Log;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class MutationSource {
 
@@ -31,15 +35,27 @@ public class MutationSource {
   private final TestPrioritiser      testPrioritiser;
   private final ClassByteArraySource source;
   private final MutationInterceptor interceptor;
+  private final Collection<String>   failingTests;
+
+  private static final Logger      LOG = Log.getLogger();
 
   public MutationSource(final MutationConfig mutationConfig,
       final TestPrioritiser testPrioritiser,
       final ClassByteArraySource source,
       final MutationInterceptor interceptor) {
+    this(mutationConfig, testPrioritiser, source, interceptor, new ArrayList<String>());
+  }
+
+  public MutationSource(final MutationConfig mutationConfig,
+      final TestPrioritiser testPrioritiser,
+      final ClassByteArraySource source,
+      final MutationInterceptor interceptor,
+      Collection<String> failingTests) {
     this.mutationConfig = mutationConfig;
     this.testPrioritiser = testPrioritiser;
     this.source = source;
     this.interceptor = interceptor;
+    this.failingTests = failingTests;
   }
 
   public Collection<MutationDetails> createMutations(final ClassName clazz) {
@@ -56,23 +72,57 @@ public class MutationSource {
           .fromBytes(this.source.getBytes(clazz.asJavaName()).get());
 
       this.interceptor.begin(tree);
-      final Collection<MutationDetails> updatedMutations = this.interceptor
+      Collection<MutationDetails> updatedMutations = this.interceptor
           .intercept(availableMutations, m);
       this.interceptor.end();
 
-      assignTestsToMutations(updatedMutations);
+      boolean hasTests = assignTestsToMutations(updatedMutations);
 
+      LOG.info("Candidate mutations number:" + updatedMutations.size());
+      LOG.info("Failing tests:" + failingTests);
+      if (hasTests) {
+        updatedMutations = selectMutationsCoveredByFailingTests(updatedMutations);
+      }
+      LOG.info("Filtered mutations number:" + updatedMutations.size());
       return updatedMutations;
     }
   }
 
-  private void assignTestsToMutations(
+  private boolean assignTestsToMutations(
       final Collection<MutationDetails> availableMutations) {
-    for (final MutationDetails mutation : availableMutations) {
+      boolean hasTests = false;
+      for (final MutationDetails mutation : availableMutations) {
       final List<TestInfo> testDetails = this.testPrioritiser
           .assignTests(mutation);
+      if (testDetails.size() > 0) {
+        hasTests = true;
+      }
       mutation.addTestsInOrder(testDetails);
+      // LOG.info("Number of tests: " + mutation.getTestsInOrder().size());
     }
+    return hasTests;
   }
 
+  private Collection<MutationDetails> selectMutationsCoveredByFailingTests(Collection<MutationDetails> mutations) {
+    if (failingTests == null || failingTests.size() == 0) {
+      return mutations;
+    }
+    Collection<MutationDetails> filteredMutations = new ArrayList<>();
+    for (MutationDetails mutation : mutations) {
+      //format of test name: testClassName.testMethodName
+      List<String> testsInOrder = mutation.getTestsInOrder().stream().map(ti -> ti.getName().substring(0, ti.getName().indexOf("("))).collect(Collectors.toList());
+      // if (mutation.getLineNumber() == 191) {
+      //   LOG.info(testsInOrder.toString());
+      // }
+      for (String failingTest : failingTests) {
+        if (testsInOrder.contains(failingTest)) {
+          // LOG.info(mutation.getClassLine().toString());
+          filteredMutations.add(mutation);
+          break;
+        }
+      }
+    }
+
+    return filteredMutations;
+  }
 }

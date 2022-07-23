@@ -29,6 +29,9 @@ import static org.pitest.mutationtest.report.xml.Tag.mutation;
 import static org.pitest.mutationtest.report.xml.Tag.mutator;
 import static org.pitest.mutationtest.report.xml.Tag.sourceFile;
 import static org.pitest.mutationtest.report.xml.Tag.succeedingTests;
+import static org.pitest.mutationtest.report.xml.Tag.timeoutTests;
+import static org.pitest.mutationtest.report.xml.Tag.memoryErrorTests;
+import static org.pitest.mutationtest.report.xml.Tag.runErrorTests;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -44,7 +47,8 @@ import org.pitest.util.StringUtil;
 import org.pitest.util.Unchecked;
 
 enum Tag {
-  mutation, sourceFile, mutatedClass, mutatedMethod, methodDescription, lineNumber, mutator, indexes, index, killingTest, killingTests, succeedingTests, description, blocks, block
+  mutation, sourceFile, mutatedClass, mutatedMethod, methodDescription, lineNumber, mutator, indexes, index, killingTest, 
+  killingTests, succeedingTests, description, blocks, block, timeoutTests, runErrorTests, memoryErrorTests;
 }
 
 public class XMLReportListener implements MutationResultListener {
@@ -97,6 +101,12 @@ public class XMLReportListener implements MutationResultListener {
             createTestDesc(mutation.getKillingTests()), killingTests)
         + makeNodeWhenConditionSatisfied(fullMutationMatrix,
             createTestDesc(mutation.getSucceedingTests()), succeedingTests)
+        + makeNodeWhenConditionSatisfied(fullMutationMatrix,
+            createTestDesc(mutation.getTimeoutTests()), timeoutTests)
+        + makeNodeWhenConditionSatisfied(fullMutationMatrix,
+            createTestDesc(mutation.getRunErrorTests()), runErrorTests)
+        + makeNodeWhenConditionSatisfied(fullMutationMatrix,
+            createTestDesc(mutation.getMemoryErrorTests()), memoryErrorTests)
         + makeNode(clean(details.getDescription()), description);
   }
 

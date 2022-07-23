@@ -19,7 +19,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -60,6 +62,7 @@ public class DefaultCoverageGenerator implements CoverageGenerator {
   private final File             workingDir;
   private final CoverageExporter exporter;
   private final Verbosity        verbosity;
+  private final Set<String>      failingTests;
 
   public DefaultCoverageGenerator(final File workingDir,
       final CoverageOptions coverageOptions, final LaunchOptions launchOptions,
@@ -72,6 +75,7 @@ public class DefaultCoverageGenerator implements CoverageGenerator {
     this.workingDir = workingDir;
     this.exporter = exporter;
     this.verbosity = verbosity;
+    this.failingTests = new HashSet<>();
   }
 
   @Override
@@ -108,6 +112,7 @@ public class DefaultCoverageGenerator implements CoverageGenerator {
   }
 
   private static void verifyBuildSuitableForMutationTesting(final CoverageData coverage) {
+    // should not complain about non green tests now
     if (!coverage.allTestsGreen()) {
       LOG.severe("Tests failing without mutation: " + StringUtil.newLine()
           + coverage.getFailingTestDescriptions().stream().map(Description::toString)

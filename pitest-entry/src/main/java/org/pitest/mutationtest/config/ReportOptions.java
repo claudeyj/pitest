@@ -144,6 +144,7 @@ public class ReportOptions {
   private Path                           projectBase;
   private Charset inputEncoding;
   private Charset outputEncoding;
+  private Collection<String>             failingTests;
 
 
   public Verbosity getVerbosity() {
@@ -637,6 +638,14 @@ public class ReportOptions {
     this.outputEncoding = outputEncoding;
   }
 
+  public Collection<String> getFailingTests() {
+    return this.failingTests;
+  }
+
+  public void setFailingTests(Collection<String> failingTests) {
+    this.failingTests = failingTests;
+  }
+
 
   @Override
   public String toString() {
@@ -685,6 +694,7 @@ public class ReportOptions {
             .add("projectBase=" + projectBase)
             .add("inputEncoding=" + inputEncoding)
             .add("outputEncoding=" + outputEncoding)
+            .add("failingTests=" + failingTests)
             .toString();
   }
 

@@ -56,7 +56,7 @@ public class CoverageData implements CoverageDatabase {
 
   public void calculateClassCoverage(final CoverageResult cr) {
 
-    checkForFailedTest(cr);
+    // checkForFailedTest(cr);
     final TestInfo ti = this.createTestInfo(cr.getTestUnitDescription(),
             cr.getExecutionTime(), cr.getNumberOfCoveredBlocks());
 
@@ -65,6 +65,8 @@ public class CoverageData implements CoverageDatabase {
     for (final BlockLocation each : cr.getCoverage()) {
         addTestsToBlockMap(ti, each);
     }
+    
+    // LOG.info("Number of covered blocks: " + cr.getNumberOfCoveredBlocks());
   }
 
   // populates class with class level data only, without block level data

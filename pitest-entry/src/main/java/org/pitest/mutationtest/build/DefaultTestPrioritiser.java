@@ -2,12 +2,9 @@ package org.pitest.mutationtest.build;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.pitest.classinfo.ClassName;
-import org.pitest.coverage.BlockLocation;
 import org.pitest.coverage.CoverageDatabase;
 import org.pitest.coverage.TestInfo;
 import org.pitest.mutationtest.engine.MutationDetails;
@@ -36,10 +33,7 @@ public class DefaultTestPrioritiser implements TestPrioritiser {
   }
 
   private Collection<TestInfo> pickTests(MutationDetails mutation) {
-    return mutation.getBlocks().stream()
-            .map(block -> new BlockLocation(mutation.getId().getLocation(), block))
-            .flatMap(loc -> this.coverage.getTestsForBlockLocation(loc).stream())
-            .collect(Collectors.toCollection(() -> new HashSet<>()));
+    return this.coverage.getTestsForClassLine(mutation.getClassLine());
   }
 
   private List<TestInfo> prioritizeTests(ClassName clazz,

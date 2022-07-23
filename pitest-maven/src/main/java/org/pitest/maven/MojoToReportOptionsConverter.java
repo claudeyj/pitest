@@ -157,6 +157,8 @@ public class MojoToReportOptionsConverter {
     data.setInputEncoding(this.mojo.getSourceEncoding());
     data.setOutputEncoding(this.mojo.getOutputEncoding());
 
+    data.setFailingTests(this.mojo.getFailingTests());
+
     if (this.mojo.getProjectBase() != null) {
       data.setProjectBase(FileSystems.getDefault().getPath(this.mojo.getProjectBase()));
     }

@@ -28,6 +28,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.pitest.functional.FCollection;
+import static org.pitest.functional.prelude.Prelude.or;
 import org.pitest.mutationtest.engine.MutationDetails;
 
 public class MutationStatusMap {
@@ -73,6 +74,14 @@ public class MutationStatusMap {
         .collect(Collectors.toList());
   }
 
+  public Collection<MutationDetails> getCrashed() {
+    return this.mutationMap.entrySet().stream().filter(
+      or(hasStatus(DetectionStatus.RUN_ERROR), 
+      or(hasStatus(DetectionStatus.MEMORY_ERROR), 
+      hasStatus(DetectionStatus.TIMED_OUT))))
+      .map(toMutationDetails()).collect(Collectors.toList());
+  }
+
   public Set<MutationDetails> allMutations() {
     return this.mutationMap.keySet();
   }
@@ -95,6 +104,10 @@ public class MutationStatusMap {
         FCollection.filter(this.mutationMap.keySet(), hasNoCoverage()),
         DetectionStatus.NO_COVERAGE);
 
+  }
+
+  public void removeUncoveredMutations() {
+    mutationMap.entrySet().removeIf(a -> a.getKey().getTestsInOrder().isEmpty());
   }
 
   private static Predicate<MutationDetails> hasNoCoverage() {

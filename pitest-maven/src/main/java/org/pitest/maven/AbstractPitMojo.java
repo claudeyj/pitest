@@ -394,6 +394,12 @@ public class AbstractPitMojo extends AbstractMojo {
 
   private final GoalStrategy          goalStrategy;
 
+  /**
+   * Initial failing tests without mutation
+   */
+  @Parameter(property = "failingTests")
+  private ArrayList<String>           failingTests;
+
   public AbstractPitMojo() {
     this(new RunPitStrategy(), new DependencyFilter(PluginServices.makeForLoader(
         AbstractPitMojo.class.getClassLoader())), PluginServices.makeForLoader(
@@ -755,6 +761,10 @@ public class AbstractPitMojo extends AbstractMojo {
 
   public String getProjectBase() {
     return projectBase;
+  }
+
+  public ArrayList<String> getFailingTests() {
+    return failingTests == null ? new ArrayList<>() : failingTests;
   }
 
   static class RunDecision {

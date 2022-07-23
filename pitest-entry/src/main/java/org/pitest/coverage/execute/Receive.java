@@ -91,7 +91,7 @@ final class Receive implements ReceiveStrategy {
       final Description d, Collection<BlockLocation> visitedBlocks) {
     final boolean isGreen = is.readBoolean();
     final int executionTime = is.readInt();
-    return new CoverageResult(d, executionTime, isGreen,
+    return new CoverageResult(d, executionTime, true,
         visitedBlocks);
   }
 

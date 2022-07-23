@@ -58,7 +58,7 @@ public class CoverageDecorator extends TestUnitDecorator {
     }
 
     this.invokeQueue.recordTestOutcome(child().getDescription(),
-        !wrappedCollector.shouldExit(), executionTime);
+        !wrappedCollector.shouldExit(), executionTime); //this shouldExit doesn't matter at all as long as we set it to true outside.
 
   }
 

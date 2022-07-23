@@ -90,6 +90,7 @@ import static org.pitest.mutationtest.config.ConfigOption.USE_CLASSPATH_JAR;
 import static org.pitest.mutationtest.config.ConfigOption.USE_INLINED_CODE_DETECTION;
 import static org.pitest.mutationtest.config.ConfigOption.VERBOSE;
 import static org.pitest.mutationtest.config.ConfigOption.VERBOSITY;
+import static org.pitest.mutationtest.config.ConfigOption.FAILING_TESTS;;
 
 public class OptionsParser {
 
@@ -145,6 +146,7 @@ public class OptionsParser {
   private final OptionSpec<File>                     projectBaseSpec;
   private final OptionSpec<String>                   inputEncoding;
   private final OptionSpec<String>                   outputEncoding;
+  private final OptionSpec<String>                   failingTestsSpec;
   
   public OptionsParser(Predicate<String> dependencyFilter) {
 
@@ -384,6 +386,12 @@ public class OptionsParser {
     this.projectBaseSpec = parserAccepts(PROJECT_BASE)
             .withRequiredArg().ofType(File.class);
 
+    this.failingTestsSpec = parserAccepts(FAILING_TESTS)
+        .withRequiredArg()
+        .ofType(String.class)
+        .withValuesSeparatedBy(',')
+        .describedAs("Initial failing tests for the buggy program");
+
   }
 
   private OptionSpecBuilder parserAccepts(final ConfigOption option) {
@@ -479,6 +487,8 @@ public class OptionsParser {
     if (userArgs.has(projectBaseSpec)) {
       data.setProjectBase(this.projectBaseSpec.value(userArgs).toPath());
     }
+
+    data.setFailingTests(failingTestsSpec.values(userArgs));
 
     if (userArgs.has("?")) {
       return new ParseResult(data, "See above for supported parameters.");
