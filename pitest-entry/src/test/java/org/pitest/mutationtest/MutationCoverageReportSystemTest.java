@@ -33,6 +33,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import com.example.classloaders.MuteeInOtherClassloader;
+import com.example.classloaders.MuteeInOtherClassloaderPooledTest;
+import com.example.classloaders.MuteeInOtherClassloaderTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -120,7 +123,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
   @Test
   public void shouldLoadResoucesOffClassPathFromFolderWithSpaces() {
-    setMutators("RETURN_VALS");
+    setMutators("FALSE_RETURNS");
     this.data
     .setTargetClasses(asList("com.example.LoadsResourcesFromClassPath*"));
     this.data.setVerbosity(Verbosity.VERBOSE);
@@ -288,7 +291,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
   @Test
   public void shouldUseTestsDefinedInASuppliedJUnitThreeSuite() {
-    setMutators("RETURN_VALS");
+    setMutators("PRIMITIVE_RETURNS");
     this.data.setTargetClasses(asGlobs(CoveredByJUnitThreeSuite.class));
     this.data.setTargetTests(predicateFor(JUnitThreeSuite.class));
     this.data.setVerbosity(Verbosity.VERBOSE);
@@ -311,7 +314,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
   @Test
   public void shouldExitAfterFirstFailureWhenTestClassAnnotatedWithBeforeClass() {
-    setMutators("RETURN_VALS");
+    setMutators("PRIMITIVE_RETURNS");
     this.data
     .setTargetClasses(asGlobs(CoveredByABeforeAfterClass.class));
     this.data.setTargetTests(predicateFor(BeforeAfterClassTest.class));
@@ -324,7 +327,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
   @Test
   public void shouldKillMutationsWhenMutationsPreventsConstructionOfTestClass() {
-    setMutators("RETURN_VALS");
+    setMutators("PRIMITIVE_RETURNS");
 
     this.data
     .setTargetClasses(asGlobs(com.example.mutatablecodeintest.Mutee.class));
@@ -338,7 +341,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
   @Test
   public void shouldKillMutationsWhenKillingTestClassContainsAnIgnoreOnAnotherMethod() {
-    setMutators("RETURN_VALS");
+    setMutators("PRIMITIVE_RETURNS");
 
     this.data
     .setTargetClasses(asGlobs(com.example.testhasignores.Mutee.class));
@@ -389,7 +392,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
   }
 
   @Test
-  public void willMutatePriveMethodsCalledInChainFromInitializer() {
+  public void doesNotMutatePrivateMethodsCalledInChainFromInitializer() {
     setMutators("VOID_METHOD_CALLS");
 
     this.data
@@ -397,13 +400,12 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
     createAndRun();
 
-    // would prefer removed here
-    verifyResults(NO_COVERAGE);
+    verifyResults();
   }
 
   @Test
   public void shouldNotMutateClassesAnnotatedWithGenerated() {
-    setMutators("RETURN_VALS");
+    setMutators("PRIMITIVE_RETURNS");
     this.data
     .setTargetClasses(asGlobs(AnnotatedToAvoidAtClassLevel.class));
 
@@ -414,7 +416,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
   @Test(timeout = 20000, expected = PitError.class)
   public void shouldRecoverFromMinionThatDoesNotStart() {
-    setMutators("RETURN_VALS");
+    setMutators("PRIMITIVE_RETURNS");
 
     this.data
             .setTargetClasses(asGlobs(com.example.testhasignores.Mutee.class));
@@ -426,6 +428,34 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
     createAndRun();
 
     // just running without a hang then erroring is success
+  }
+
+  @Test
+  public void handlesMutantsInOtherClassLoaders() {
+    setMutators("PRIMITIVE_RETURNS", "VOID_METHOD_CALLS");
+
+    this.data
+            .setTargetClasses(asGlobs(MuteeInOtherClassloader.class));
+    this.data
+            .setTargetTests(predicateFor(MuteeInOtherClassloaderTest.class));
+
+    createAndRun();
+
+    verifyResults(KILLED, SURVIVED, SURVIVED, SURVIVED);
+  }
+
+  @Test
+  public void handlesMutantsInPooledClassLoaders() {
+    setMutators("PRIMITIVE_RETURNS", "VOID_METHOD_CALLS");
+
+    this.data
+            .setTargetClasses(asGlobs(MuteeInOtherClassloader.class));
+    this.data
+            .setTargetTests(predicateFor(MuteeInOtherClassloaderPooledTest.class));
+
+    createAndRun();
+
+    verifyResults(KILLED, SURVIVED, SURVIVED, SURVIVED);
   }
 
   @Generated

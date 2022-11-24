@@ -1,10 +1,12 @@
 package org.pitest.maven.report;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
 import org.codehaus.plexus.util.FileUtils;
+import org.pitest.aggregate.AggregationResult;
 import org.pitest.aggregate.ReportAggregator;
 import org.pitest.functional.FCollection;
 import org.pitest.maven.DependencyFilter;
@@ -35,6 +37,24 @@ abstract class AbstractPitAggregationReportMojo extends PitReportMojo {
    */
   @Parameter(property = "reactorProjects", readonly = true)
   List<MavenProject> reactorProjects;
+
+  /**
+   * Mutation score threshold at which to fail build
+   */
+  @Parameter(defaultValue = "0", property = "aggregatedMutationThreshold")
+  private int aggregatedMutationThreshold;
+
+  /**
+   * Test strength score threshold at which to fail build
+   */
+  @Parameter(defaultValue = "0", property = "aggregatedTestStrengthThreshold")
+  private int aggregatedTestStrengthThreshold;
+
+  /**
+   * Maximum surviving mutants to allow
+   */
+  @Parameter(defaultValue = "-1", property = "aggregatedMaxSurviving")
+  private int aggregatedMaxSurviving = -1;
 
   private final ReportSourceLocator reportSourceLocator = new ReportSourceLocator();
 
@@ -69,7 +89,12 @@ abstract class AbstractPitAggregationReportMojo extends PitReportMojo {
               new UndatedReportDirCreationStrategy()))
           .build();
 
-      reportAggregator.aggregateReport();
+      AggregationResult result = reportAggregator.aggregateReport();
+
+      throwErrorIfTestStrengthBelowThreshold(result.getTestStrength());
+      throwErrorIfScoreBelowThreshold(result.getMutationCoverage());
+      throwErrorIfMoreThanMaximumSurvivors(result.getMutationsSurvived());
+
     } catch (final Exception e) {
       throw new MavenReportException(e.getMessage(), e);
     }
@@ -79,22 +104,28 @@ abstract class AbstractPitAggregationReportMojo extends PitReportMojo {
       final ReportAggregator.Builder reportAggregationBuilder,
       final MavenProject proj) throws Exception {
     final File projectBaseDir = proj.getBasedir();
-    List<File> files = getProjectFilesByFilter(projectBaseDir,
-        MUTATION_RESULT_FILTER);
-    for (final File file : files) {
+    for (final File file : getProjectFilesByFilter(projectBaseDir,
+            MUTATION_RESULT_FILTER)) {
       reportAggregationBuilder.addMutationResultsFile(file);
     }
-    files = getProjectFilesByFilter(projectBaseDir, LINECOVERAGE_FILTER);
-    for (final File file : files) {
+
+    for (final File file : getProjectFilesByFilter(projectBaseDir, LINECOVERAGE_FILTER)) {
       reportAggregationBuilder.addLineCoverageFile(file);
     }
-    files = convertToRootDirs(proj.getCompileSourceRoots(),
-        proj.getTestCompileSourceRoots());
-    for (final File file : files) {
+
+    for (final File file : convertToRootDirs(proj.getCompileSourceRoots(),
+            proj.getTestCompileSourceRoots())) {
       reportAggregationBuilder.addSourceCodeDirectory(file);
     }
-    files = getCompiledDirs(proj);
-    for (final File file : files) {
+
+    // The kotlin plugin does not add the source dirs to the maven model. Build helper plugin
+    // won't trigger if goals called directly. Easiest way to plug this is this hack to
+    // always attempt to add the kotlin source dir on its standard location
+    reportAggregationBuilder.addSourceCodeDirectory(proj.getBasedir().toPath()
+            .resolve("src").resolve("main").resolve("kotlin").toFile());
+
+
+    for (final File file : getCompiledDirs(proj)) {
       reportAggregationBuilder.addCompiledCodeDirectory(file);
     }
   }
@@ -137,5 +168,35 @@ abstract class AbstractPitAggregationReportMojo extends PitReportMojo {
         Arrays.asList(project.getBuild().getOutputDirectory(),
             project.getBuild().getTestOutputDirectory()),
         sourceRoots);
+  }
+
+  private void throwErrorIfScoreBelowThreshold(final int mutationCoverage)
+      throws MojoFailureException {
+    if ((this.aggregatedMutationThreshold != 0)
+        && (mutationCoverage < this.aggregatedMutationThreshold)) {
+      throw new MojoFailureException("Mutation score of "
+          + mutationCoverage + " is below threshold of "
+          + this.aggregatedMutationThreshold);
+    }
+  }
+
+  private void throwErrorIfTestStrengthBelowThreshold(final int testStrength)
+      throws MojoFailureException {
+    if ((this.aggregatedTestStrengthThreshold != 0)
+        && (testStrength < this.aggregatedTestStrengthThreshold)) {
+      throw new MojoFailureException("Test strength score of "
+          + testStrength + " is below threshold of "
+          + this.aggregatedTestStrengthThreshold);
+    }
+  }
+
+  private void throwErrorIfMoreThanMaximumSurvivors(final long mutationsSurvived)
+      throws MojoFailureException {
+    if ((this.aggregatedMaxSurviving >= 0)
+        && (mutationsSurvived > this.aggregatedMaxSurviving)) {
+      throw new MojoFailureException("Had "
+          + mutationsSurvived + " surviving mutants, but only "
+          + this.aggregatedMaxSurviving + " survivors allowed");
+    }
   }
 }

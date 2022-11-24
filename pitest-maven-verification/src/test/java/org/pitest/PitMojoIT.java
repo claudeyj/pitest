@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -252,7 +253,7 @@ public class PitMojoIT {
 
     assertTrue("coverage included",
             projectReportsHtmlContents
-                    .contains("89%"));
+                    .contains("85%"));
   }
 
   /*
@@ -402,7 +403,7 @@ public class PitMojoIT {
     //assertThat(actual)
     //        .contains(
     //                "<mutation detected='false' status='SURVIVED' numberOfTestsRun='2'>" +
-     //                       "<sourceFile>ExampleController.java</sourceFile>");
+    //                        "<sourceFile>ExampleController.java</sourceFile>");
 
     assertThat(actual)
             .contains(
@@ -445,6 +446,38 @@ public class PitMojoIT {
     }
   }
 
+  @Test
+  public void shouldDisableJacoco() throws IOException, VerificationException {
+    File testDir = prepare("/pit-jacoco");
+    verifier.executeGoals(asList("test-compile", "org.pitest:pitest-maven:mutationCoverage"));
+
+    String actual = readResults(testDir);
+    assertThat(actual).doesNotContain("RUN_ERROR");
+  }
+
+  @Test
+  public void resolvesCorrectFilesForKotlinMultiModules() throws Exception {
+    // if the same filename is used for files outside of their declared package
+    // ensure the correct source file is use for annotation
+    File testDir = prepare("/pit-kotlin-multi-module");
+
+    verifier.executeGoals(asList("test-compile", "org.pitest:pitest-maven:mutationCoverage", "org.pitest:pitest-maven:report-aggregate-module"));
+
+    String moduleOneSource = FileUtils
+            .readFileToString(buildFilePath(testDir, "target", "pit-reports", "com.example.one",
+                    "DefaultArguments.kt.html"));
+    String moduleTwoSource = FileUtils
+            .readFileToString(buildFilePath(testDir, "target", "pit-reports", "com.example.two",
+                    "DefaultArguments.kt.html"));
+    String moduleThreeSource = FileUtils
+            .readFileToString(buildFilePath(testDir, "target", "pit-reports", "com.example.three",
+                    "DefaultArguments.kt.html"));
+
+    assertThat(moduleOneSource).contains("package com.example.one");
+    assertThat(moduleTwoSource).contains("package com.example.two");
+    assertThat(moduleThreeSource).contains("package com.example.three");
+
+  }
 
   private void skipIfJavaVersionNotSupportByThirdParty() {
     String javaVersion = System.getProperty("java.version");
@@ -474,6 +507,7 @@ public class PitMojoIT {
     verifier = new Verifier(path);
     verifier.setAutoclean(false);
     verifier.setDebug(true);
+    verifier.getCliOptions().add("-Dverbose=true");
     verifier.getCliOptions().add("-Dpit.version=" + VERSION);
     verifier.getCliOptions().add(
             "-Dthreads=" + (Runtime.getRuntime().availableProcessors()));

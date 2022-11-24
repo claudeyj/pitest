@@ -38,12 +38,13 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+
+import org.apache.commons.text.StringEscapeUtils;
 import org.pitest.mutationtest.ClassMutationResults;
 import org.pitest.mutationtest.MutationResult;
 import org.pitest.mutationtest.MutationResultListener;
 import org.pitest.mutationtest.engine.MutationDetails;
 import org.pitest.util.ResultOutputStrategy;
-import org.pitest.util.StringUtil;
 import org.pitest.util.Unchecked;
 
 enum Tag {
@@ -111,7 +112,7 @@ public class XMLReportListener implements MutationResultListener {
   }
 
   private String clean(final String value) {
-    return StringUtil.escapeBasicHtmlChars(value);
+    return StringEscapeUtils.escapeXml11(value);
   }
 
   private String makeNode(final String value, final String attributes,

@@ -6,7 +6,6 @@ import org.pitest.coverage.BlockLocation;
 import org.pitest.coverage.CoverageData;
 import org.pitest.coverage.ReportCoverage;
 import org.pitest.coverage.analysis.LineMapper;
-import org.pitest.functional.FCollection;
 import org.pitest.mutationtest.ClassMutationResults;
 import org.pitest.mutationtest.MutationMetaData;
 import org.pitest.mutationtest.MutationResult;
@@ -19,6 +18,7 @@ import org.pitest.util.ResultOutputStrategy;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,10 +29,12 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
+
 public final class ReportAggregator {
   private final ResultOutputStrategy       resultOutputStrategy;
   private final DataLoader<BlockCoverage>  blockCoverageLoader;
-  private final DataLoader<MutationResult> mutationLoader;
+  private final Set<File> mutationFiles;
 
   private final Collection<File>           sourceCodeDirectories;
   private final CodeSourceAggregator       codeSourceAggregator;
@@ -43,34 +45,53 @@ public final class ReportAggregator {
                            final Set<File> sourceCodeDirs, final Set<File> compiledCodeDirs, Charset inputCharset, Charset outputCharset) {
     this.resultOutputStrategy = resultOutputStrategy;
     this.blockCoverageLoader = new BlockCoverageDataLoader(lineCoverageFiles);
-    this.mutationLoader = new MutationResultDataLoader(mutationFiles);
+    this.mutationFiles = mutationFiles;
     this.sourceCodeDirectories = Collections.unmodifiableCollection(new HashSet<>(sourceCodeDirs));
     this.codeSourceAggregator = new CodeSourceAggregator(new HashSet<>(compiledCodeDirs));
     this.inputCharset = inputCharset;
     this.outputCharset = outputCharset;
   }
 
-  public void aggregateReport() throws ReportAggregationException {
-    final MutationMetaData mutationMetaData = new MutationMetaData(new ArrayList<>(this.mutationLoader.loadData()));
+  public AggregationResult aggregateReport() throws ReportAggregationException {
+    SmartSourceLocator sourceLocator = new SmartSourceLocator(asPaths(this.sourceCodeDirectories), inputCharset);
 
-    final MutationResultListener mutationResultListener = createResultListener(mutationMetaData);
+    final MutationResultListener mutationResultListener = createResultListener(sourceLocator, Collections.emptySet());
+    final ReportAggregatorResultListener reportAggregatorResultListener = new ReportAggregatorResultListener();
 
+    reportAggregatorResultListener.runStart();
     mutationResultListener.runStart();
 
-    for (final ClassMutationResults mutationResults : mutationMetaData.toClassResults()) {
-      mutationResultListener.handleMutationResult(mutationResults);
+    for (File file : mutationFiles) {
+
+      // hack so only source files from within a given module are resolved
+      sourceLocator.sourceRootHint(file.getParentFile().toPath());
+
+      MutationResultDataLoader loader = new MutationResultDataLoader(asList(file));
+      MutationMetaData mutationMetaData = new MutationMetaData(new ArrayList<>(loader.loadData()));
+      for (ClassMutationResults classResult : mutationMetaData.toClassResults()) {
+        reportAggregatorResultListener.handleMutationResult(classResult);
+        mutationResultListener.handleMutationResult(classResult);
+      }
+
     }
+    reportAggregatorResultListener.runEnd();
     mutationResultListener.runEnd();
+
+    return reportAggregatorResultListener.result();
   }
 
-  private MutationResultListener createResultListener(final MutationMetaData mutationMetaData) throws ReportAggregationException {
-    final SourceLocator sourceLocator = new SmartSourceLocator(this.sourceCodeDirectories, inputCharset);
-
+  private MutationResultListener createResultListener(SourceLocator sourceLocator, Collection<String> mutatorNames) throws ReportAggregationException {
     final CodeSource codeSource = this.codeSourceAggregator.createCodeSource();
     final ReportCoverage coverageDatabase = calculateCoverage(codeSource);
-    final Collection<String> mutatorNames = new HashSet<>(FCollection.flatMap(mutationMetaData.getMutations(), resultToMutatorName()));
+    //final Collection<String> mutatorNames = new HashSet<>(FCollection.flatMap(mutationMetaData.getMutations(), resultToMutatorName()));
 
     return new MutationHtmlReportListener(outputCharset, coverageDatabase, this.resultOutputStrategy, mutatorNames, sourceLocator);
+  }
+
+  private Collection<Path> asPaths(Collection<File> files) {
+    return files.stream()
+            .map(File::toPath)
+            .collect(Collectors.toList());
   }
 
   private static Function<MutationResult, List<String>> resultToMutatorName() {
@@ -110,8 +131,8 @@ public final class ReportAggregator {
     private final Set<File>      mutationResultsFiles    = new HashSet<>();
     private final Set<File>      sourceCodeDirectories   = new HashSet<>();
     private final Set<File>      compiledCodeDirectories = new HashSet<>();
-    private Charset inputCharset;
-    private Charset outputCharset;
+    private Charset inputCharset = Charset.defaultCharset();
+    private Charset outputCharset = Charset.defaultCharset();
 
     public Builder inputCharSet(Charset inputCharset) {
       this.inputCharset = inputCharset;
@@ -206,6 +227,14 @@ public final class ReportAggregator {
 
     public Set<File> getSourceCodeDirectories() {
       return this.sourceCodeDirectories;
+    }
+
+    public Charset getInputCharSet() {
+      return this.inputCharset;
+    }
+
+    public Charset getOutputCharSet() {
+      return this.outputCharset;
     }
 
     public ReportAggregator build() {

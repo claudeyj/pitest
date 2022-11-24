@@ -109,14 +109,6 @@ public class AbstractPitMojo extends AbstractMojo {
   private boolean                     withHistory;  
 
   /**
-   * Maximum distance to look from test to class. Relevant when mutating static
-   * initializers
-   *
-   */
-  @Parameter(defaultValue = "-1", property = "maxDependencyDistance")
-  private int                         maxDependencyDistance;
-
-  /**
    * Number of threads to use
    */
   @Parameter(defaultValue = "1", property = "threads")
@@ -192,7 +184,7 @@ public class AbstractPitMojo extends AbstractMojo {
   /**
    * Create timestamped subdirectory for report
    */
-  @Parameter(defaultValue = "true", property = "timestampedReports")
+  @Parameter(defaultValue = "false", property = "timestampedReports")
   private boolean                     timestampedReports;
 
   /**
@@ -569,10 +561,6 @@ public class AbstractPitMojo extends AbstractMojo {
 
   public File getReportsDirectory() {
     return this.reportsDirectory;
-  }
-
-  public int getMaxDependencyDistance() {
-    return this.maxDependencyDistance;
   }
 
   public int getThreads() {

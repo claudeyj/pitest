@@ -50,7 +50,7 @@ public abstract class ReportTestBase {
     this.metaDataExtractor = new MetaDataExtractor();
     this.plugins = PluginServices.makeForContextLoader();
     this.data = new ReportOptions();
-    this.data.setSourceDirs(Collections.<File> emptyList());
+    this.data.setSourceDirs(Collections.emptyList());
     this.data.setGroupConfig(new TestGroupConfig());
   }
 
@@ -142,7 +142,7 @@ public abstract class ReportTestBase {
         configuration, this.data.getVerbosity());
   }
 
-  protected void setMutators(final String mutator) {
+  protected void setMutators(final String... mutator) {
     this.data.setMutators(Arrays.asList(mutator));
   }
 

@@ -91,7 +91,7 @@ public class CoverageMinion {
       List<TestUnit> toExecute = removeTestsExecutedDuringDiscovery(tus);
 
       if (!toExecute.isEmpty()) {
-        LOG.info(() -> tus.size() + "Executing " + toExecute.size() + " tests not run during discovery.");
+        LOG.info(() -> "Executing " + toExecute.size() + " tests not run during discovery.");
         CoverageWorker worker = new CoverageWorker(invokeQueue, toExecute);
         worker.run();
       } else {
@@ -167,7 +167,7 @@ public class CoverageMinion {
         .findTestUnitsForAllSuppliedClasses(classes.stream()
                 .flatMap(ClassName.nameToClass())
                 .collect(Collectors.toList()));
-    LOG.info(() -> "Found  " + tus.size() + " tests");
+    LOG.info(() -> "Found " + tus.size() + " tests");
     return tus;
   }
 

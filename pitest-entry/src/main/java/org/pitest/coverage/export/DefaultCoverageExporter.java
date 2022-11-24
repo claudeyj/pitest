@@ -11,8 +11,9 @@ import org.pitest.coverage.BlockCoverage;
 import org.pitest.coverage.CoverageExporter;
 import org.pitest.mutationtest.engine.Location;
 import org.pitest.util.ResultOutputStrategy;
-import org.pitest.util.StringUtil;
 import org.pitest.util.Unchecked;
+
+import static org.apache.commons.text.StringEscapeUtils.escapeXml11;
 
 /**
  * Quick and dirty export of coverage data into XML
@@ -46,16 +47,16 @@ public class DefaultCoverageExporter implements CoverageExporter {
     final Location l = each.getBlock().getLocation();
     write(
         out,
-        "<block classname='" + l.getClassName().asJavaName() + "'"
+        "<block classname='" + escapeXml11(l.getClassName().asJavaName()) + "'"
             + " method='"
-            + StringUtil.escapeBasicHtmlChars(l.getMethodName()) + StringUtil.escapeBasicHtmlChars(l.getMethodDesc())
+            + escapeXml11(l.getMethodName()) + escapeXml11(l.getMethodDesc())
             + "' number='" + each.getBlock().getBlock()
             + "'>");
     write(out, "<tests>\n");
     final List<String> ts = new ArrayList<>(each.getTests());
     Collections.sort(ts);
     for (final String test : ts) {
-      write(out, "<test name='" + StringUtil.escapeBasicHtmlChars(test) + "'/>\n");
+      write(out, "<test name='" + escapeXml11(test) + "'/>\n");
     }
     write(out, "</tests>\n");
     write(out, "</block>\n");

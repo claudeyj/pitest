@@ -15,53 +15,61 @@
 package org.pitest.mutationtest.tooling;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 
-import org.pitest.functional.FArray;
 import org.pitest.functional.FCollection;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.pitest.mutationtest.SourceLocator;
+import org.pitest.util.Unchecked;
 
 public class SmartSourceLocator implements SourceLocator {
 
   private static final int                MAX_DEPTH = 4;
 
-  private final Collection<SourceLocator> children;
+  private final List<SourceLocator> children;
   private final Charset inputCharset;
 
-  public SmartSourceLocator(final Collection<File> roots, Charset inputCharset) {
+  public SmartSourceLocator(final Collection<Path> roots, Charset inputCharset) {
     this.inputCharset = inputCharset;
-    final Collection<File> childDirs = FCollection.flatMap(roots,
-        collectChildren(0));
+    final Collection<Path> childDirs = FCollection.flatMap(roots, collectChildren(MAX_DEPTH));
     childDirs.addAll(roots);
 
     this.children = FCollection.map(childDirs, f -> new DirectorySourceLocator(f, this.inputCharset));
   }
 
-  private Function<File, Collection<File>> collectChildren(final int depth) {
+  private Function<Path, Collection<Path>> collectChildren(final int depth) {
     return a -> collectDirectories(a, depth);
   }
 
-  private Collection<File> collectDirectories(final File root, final int depth) {
-    final Collection<File> childDirs = listFirstLevelDirectories(root);
-    if (depth < MAX_DEPTH) {
-      childDirs.addAll(FCollection.flatMap(childDirs,
-          collectChildren(depth + 1)));
+  private Collection<Path> collectDirectories(Path root, int depth) {
+    try {
+      if (!Files.exists(root)) {
+        return Collections.emptyList();
+      }
+
+      try (Stream<Path> matches = Files.find(root, depth, (unused, attributes) -> attributes.isDirectory())) {
+        return matches.collect(Collectors.toList());
+      }
+
+    } catch (IOException ex) {
+      throw Unchecked.translateCheckedException(ex);
     }
-    return childDirs;
 
-  }
-
-  private static Collection<File> listFirstLevelDirectories(final File root) {
-    return FArray.filter(root.listFiles(), File::isDirectory);
   }
 
   @Override
-  public Optional<Reader> locate(final Collection<String> classes,
-      final String fileName) {
+  public Optional<Reader> locate(Collection<String> classes, String fileName) {
     for (final SourceLocator each : this.children) {
       final Optional<Reader> reader = each.locate(classes, fileName);
       if (reader.isPresent()) {
@@ -71,4 +79,9 @@ public class SmartSourceLocator implements SourceLocator {
     return Optional.empty();
   }
 
+  /** Provide hint as to where to look when dealing with multiple modules. NOT thread safe.
+   */
+  public void sourceRootHint(Path file) {
+    children.sort(new PathComparator(file, File.separator));
+  }
 }

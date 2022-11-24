@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -92,7 +93,7 @@ public class OptionsParserTest {
   public void shouldParseCommaSeparatedListOfSourceDirectories() {
     final ReportOptions actual = parseAddingRequiredArgs("--sourceDirs",
         "foo/bar,bar/far");
-    assertEquals(Arrays.asList(new File("foo/bar"), new File("bar/far")), actual.getSourceDirs());
+    assertThat(actual.getSourcePaths()).containsExactly(Paths.get("foo/bar"), Paths.get(("bar/far")));
   }
 
   @Test
@@ -147,14 +148,14 @@ public class OptionsParserTest {
   }
 
   @Test
-  public void shouldCreateTimestampedReportsByDefault() {
+  public void shouldNotCreateTimestampedReportsByDefault() {
     final ReportOptions actual = parseAddingRequiredArgs();
-    assertTrue(actual.shouldCreateTimeStampedReports());
+    assertFalse(actual.shouldCreateTimeStampedReports());
   }
 
   @Test
   public void shouldDetermineIfSuppressTimestampedReportsFlagIsSet() {
-    final ReportOptions actual = parseAddingRequiredArgs("--timestampedReports");
+    final ReportOptions actual = parseAddingRequiredArgs("--timestampedReports=true");
     assertTrue(actual.shouldCreateTimeStampedReports());
   }
 
@@ -240,6 +241,12 @@ public class OptionsParserTest {
   public void shouldDefaultLoggingPackagesToDefaultsDefinedByDefaultMutationConfigFactory() {
     final ReportOptions actual = parseAddingRequiredArgs();
     assertEquals(ReportOptions.LOGGING_CLASSES, actual.getLoggingClasses());
+  }
+
+  @Test
+  public void shouldAvoidJBossLoggingByDefault() {
+    final ReportOptions actual = parseAddingRequiredArgs();
+    assertThat(actual.getLoggingClasses()).contains("org.jboss.logging");
   }
 
   @Test
